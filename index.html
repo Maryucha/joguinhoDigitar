@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Joguinho de Digitação Acessível</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card" role="application" aria-label="Jogo de digitação">
+    <div class="header">
+      <div class="title">
+        <span class="chip" aria-hidden="true">Joguinhos da Tia UxA</span>
+        <span>Treine sua digitação</span>
+      </div>
+      <div class="controls">
+        <label class="name-field">
+          <span class="sr-only">Nome do jogador</span>
+          <input type="text" id="playerName" placeholder="Seu nome" aria-label="Nome do jogador" />
+        </label>
+        <label>
+          <select id="mode" aria-label="Modo de jogo">
+            <option value="letters">Letras (A–Z)</option>
+            <option value="words">Palavras simples</option>
+          </select>
+        </label>
+        <label title="Duração em segundos">
+          <input type="number" id="seconds" min="30" max="600" step="10" value="120" aria-label="Tempo de jogo em segundos"/>
+        </label>
+        <label class="switch" title="Som de acerto e erro">
+          <input type="checkbox" id="soundToggle" checked aria-label="Ativar som">
+          Som
+        </label>
+        <button id="speakBtn" class="secondary" aria-label="Falar letra ou palavra">🔊 Falar</button>
+        <button id="startBtn" class="primary" aria-label="Começar jogo">Começar</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="stats" aria-live="polite">
+        <div class="stat"><div class="label">Pontuação</div><div class="value" id="score">0</div></div>
+        <div class="stat"><div class="label">Acertos</div><div class="value" id="hits">0</div></div>
+        <div class="stat"><div class="label">Erros</div><div class="value" id="misses">0</div></div>
+        <div class="stat"><div class="label">Tempo</div><div class="value"><span id="timeLeft">120</span>s</div></div>
+      </div>
+
+      <div class="arena">
+        <div id="prompt" class="prompt letter" aria-live="polite">Digite seu nome e clique em “Começar”</div>
+        <div id="wordChars" class="chars" aria-hidden="true" hidden></div>
+
+        <div class="input-row">
+          <input id="typebox" class="typebox" type="text" placeholder="Digite aqui..." autocomplete="off" inputmode="latin" aria-label="Área de digitação" disabled />
+          <button id="skipBtn" aria-label="Pular para a próxima">Pular</button>
+          <button id="resetBtn" aria-label="Reiniciar jogo">Reiniciar</button>
+        </div>
+
+        <div class="status-bubble" id="bubble" aria-live="polite">Pronto para jogar 🎯</div>
+        <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+        <div class="progress" aria-hidden="true">
+          <div id="bar" class="bar"></div>
+        </div>
+      </div>
+
+      <section class="leaderboard" aria-labelledby="rank-title">
+        <div class="lb-header">
+          <h2 id="rank-title">Ranking do modo atual</h2>
+          <span id="rankModeBadge" class="badge">Letras (A–Z)</span>
+        </div>
+        <ol id="rankList" class="rank-list"></ol>
+        <p class="lb-hint">O ranking usa a <strong>última pontuação</strong> de cada jogador neste modo.</p>
+      </section>
+    </div>
+
+    <div class="footer">
+      <span>Dica: digite em minúsculas. O teclado mostra as letras grandes (A, B, C), mas você pode digitar pequenininho (a, b, c) 😊</span>
+      <span id="status">Aguardando início…</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
