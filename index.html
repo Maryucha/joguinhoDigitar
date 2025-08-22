@@ -2,81 +2,157 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Joguinho de Digitação Acessível</title>
+  <title>Jogos da Tia Uxa</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="card" role="application" aria-label="Jogo de digitação">
-    <div class="header">
+  <div class="app" role="application">
+    <!-- Cabeçalho -->
+    <header class="header">
       <div class="title">
-        <span class="chip" aria-hidden="true">Joguinhos da Tia UxA</span>
-        <span>Treine sua digitação</span>
+        <span class="chip" aria-hidden="true">Joguinhos da Tia Uxa</span>
+        <span>Brincar e aprender</span>
       </div>
       <div class="controls">
+        <!-- Nome e tempo influenciam só o jogo de digitação -->
         <label class="name-field">
           <span class="sr-only">Nome do jogador</span>
           <input type="text" id="playerName" placeholder="Seu nome" aria-label="Nome do jogador" />
         </label>
-        <label>
-          <select id="mode" aria-label="Modo de jogo">
-            <option value="letters">Letras (A–Z)</option>
-            <option value="words">Palavras simples</option>
-          </select>
-        </label>
         <label title="Duração em segundos">
           <input type="number" id="seconds" min="30" max="600" step="10" value="120" aria-label="Tempo de jogo em segundos"/>
         </label>
-        <label class="switch" title="Som de acerto e erro">
-          <input type="checkbox" id="soundToggle" checked aria-label="Ativar som">
-          Som
+        <label class="switch" title="Som (ambos os jogos)">
+          <input type="checkbox" id="soundToggle" checked aria-label="Ativar sons">
+          🔊 Som
         </label>
-        <button id="speakBtn" class="secondary" aria-label="Falar letra ou palavra">🔊 Falar</button>
-        <button id="startBtn" class="primary" aria-label="Começar jogo">Começar</button>
+        <button id="startBtn" class="primary" aria-label="Começar jogo de digitação">Começar</button>
       </div>
-    </div>
+    </header>
 
-    <div class="content">
-      <div class="stats" aria-live="polite">
-        <div class="stat"><div class="label">Pontuação</div><div class="value" id="score">0</div></div>
-        <div class="stat"><div class="label">Acertos</div><div class="value" id="hits">0</div></div>
-        <div class="stat"><div class="label">Erros</div><div class="value" id="misses">0</div></div>
-        <div class="stat"><div class="label">Tempo</div><div class="value"><span id="timeLeft">120</span>s</div></div>
-      </div>
+    <!-- Abas grandes por ícone -->
+    <nav class="tabs" aria-label="Escolha o jogo">
+      <button class="tab active" data-tab="typing" aria-controls="panel-typing" aria-label="Jogo de Digitação">
+        <span class="tab-emoji" aria-hidden="true">⌨️</span><span class="tab-text">Digitar</span>
+      </button>
+      <button class="tab" data-tab="syllables" aria-controls="panel-syllables" aria-label="Jogo de Sílabas">
+        <span class="tab-emoji" aria-hidden="true">🧩</span><span class="tab-text">Sílabas</span>
+      </button>
+    </nav>
 
-      <div class="arena">
-        <div id="prompt" class="prompt letter" aria-live="polite">Digite seu nome e clique em “Começar”</div>
-        <div id="wordChars" class="chars" aria-hidden="true" hidden></div>
+    <!-- PAINÉIS -->
+    <main class="content">
 
-        <div class="input-row">
-          <input id="typebox" class="typebox" type="text" placeholder="Digite aqui..." autocomplete="off" inputmode="latin" aria-label="Área de digitação" disabled />
-          <button id="skipBtn" aria-label="Pular para a próxima">Pular</button>
-          <button id="resetBtn" aria-label="Reiniciar jogo">Reiniciar</button>
+      <!-- Painel: DIGITAÇÃO -->
+      <section id="panel-typing" class="panel active" aria-labelledby="tab-typing">
+        <div class="card">
+          <div class="top-row">
+            <label>
+              <select id="mode" aria-label="Modo de jogo">
+                <option value="letters">Letras (A–Z)</option>
+                <option value="words">Palavras simples</option>
+              </select>
+            </label>
+            <button id="speakBtn" class="secondary" aria-label="Falar letra ou palavra">🔊 Falar</button>
+            <button id="resetBtn" aria-label="Reiniciar jogo">Reiniciar</button>
+          </div>
+
+          <div class="stats" aria-live="polite">
+            <div class="stat"><div class="label">Pontuação</div><div class="value" id="score">0</div></div>
+            <div class="stat"><div class="label">Acertos</div><div class="value" id="hits">0</div></div>
+            <div class="stat"><div class="label">Erros</div><div class="value" id="misses">0</div></div>
+            <div class="stat"><div class="label">Tempo</div><div class="value"><span id="timeLeft">120</span>s</div></div>
+          </div>
+
+          <div class="arena">
+            <div id="prompt" class="prompt letter" aria-live="polite">Digite seu nome e clique em “Começar”</div>
+            <div id="wordChars" class="chars" aria-hidden="true" hidden></div>
+
+            <div class="input-row">
+              <input id="typebox" class="typebox" type="text" placeholder="Digite aqui..." autocomplete="off" inputmode="latin" aria-label="Área de digitação" disabled />
+              <button id="skipBtn" aria-label="Pular para a próxima">Pular</button>
+            </div>
+
+            <div class="status-bubble" id="bubble" aria-live="polite">Pronto para jogar 🎯</div>
+            <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+            <div class="progress" aria-hidden="true">
+              <div id="bar" class="bar"></div>
+            </div>
+          </div>
+
+          <section class="leaderboard" aria-labelledby="rank-title">
+            <div class="lb-header">
+              <h2 id="rank-title">Ranking do modo atual</h2>
+              <span id="rankModeBadge" class="badge">Letras (A–Z)</span>
+            </div>
+            <ol id="rankList" class="rank-list"></ol>
+            <p class="lb-hint">O ranking usa a <strong>última pontuação</strong> de cada jogador neste modo.</p>
+          </section>
         </div>
-
-        <div class="status-bubble" id="bubble" aria-live="polite">Pronto para jogar 🎯</div>
-        <div class="confetti" id="confetti" aria-hidden="true"></div>
-
-        <div class="progress" aria-hidden="true">
-          <div id="bar" class="bar"></div>
-        </div>
-      </div>
-
-      <section class="leaderboard" aria-labelledby="rank-title">
-        <div class="lb-header">
-          <h2 id="rank-title">Ranking do modo atual</h2>
-          <span id="rankModeBadge" class="badge">Letras (A–Z)</span>
-        </div>
-        <ol id="rankList" class="rank-list"></ol>
-        <p class="lb-hint">O ranking usa a <strong>última pontuação</strong> de cada jogador neste modo.</p>
       </section>
-    </div>
 
-    <div class="footer">
-      <span>Dica: digite em minúsculas. O teclado mostra as letras grandes (A, B, C), mas você pode digitar pequenininho (a, b, c) 😊</span>
+      <!-- Painel: SÍLABAS -->
+      <section id="panel-syllables" class="panel" aria-labelledby="tab-syllables">
+        <div class="card">
+          <div class="syllables-grid">
+            <!-- coluna 1 -->
+            <div class="left-col">
+              <div id="syllableDisplay" class="syllable-display" aria-label="Sílabas da palavra"></div>
+              <div id="imageWrap" class="emoji-box" role="img" aria-label="Imagem da palavra">🐱</div>
+
+              <div class="controls-grid" role="group" aria-label="Controles do jogo de sílabas">
+                <button id="btnPlayWord" class="big-btn big-btn--primary" aria-label="Ouvir a palavra">
+                  <span class="big-btn__icon" aria-hidden="true">▶️</span>
+                  <span class="big-btn__label">Ouvir</span>
+                </button>
+                <button id="btnPlaySyllables" class="big-btn big-btn--primary" aria-label="Ouvir as sílabas">
+                  <span class="big-btn__icon" aria-hidden="true">🔊</span>
+                  <span class="big-btn__label">Sí-la-bas</span>
+                </button>
+                <button id="btnRepeat" class="big-btn big-btn--success" aria-label="Repita comigo">
+                  <span class="big-btn__icon" aria-hidden="true">🗣️</span>
+                  <span class="big-btn__label">Repita</span>
+                </button>
+              </div>
+
+              <p id="voiceHint" class="hint"></p>
+            </div>
+
+            <!-- coluna 2 -->
+            <div class="right-col">
+              <div class="section-title">
+                <span role="img" aria-hidden="true">🧩</span> Arraste para a ordem
+              </div>
+              <div id="dropZone" class="dropzone" aria-label="Caixinhas para montar a palavra"></div>
+
+              <div class="section-title mt-2">
+                <span role="img" aria-hidden="true">🎒</span> Sílabas disponíveis
+              </div>
+              <div id="bank" class="bank" aria-label="Sílabas para escolher"></div>
+
+              <div class="actions">
+                <button id="btnNext" class="pill-btn pill-btn--violet" aria-label="Próxima palavrinha">Próxima</button>
+                <button id="btnReset" class="pill-btn" aria-label="Recomeçar">Recomeçar</button>
+              </div>
+
+              <div id="feedback" class="feedback" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span>Dica: use os <strong>ícones</strong> e o <strong>som</strong> — dá pra brincar sem ler 😉</span>
       <span id="status">Aguardando início…</span>
-    </div>
+    </footer>
   </div>
+
+  <!-- Confete de tela cheia para o jogo de sílabas -->
+  <canvas id="confettiFull" class="confetti fullscreen"></canvas>
 
   <script src="script.js"></script>
 </body>

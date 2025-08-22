@@ -1,4 +1,28 @@
-(function(){
+/* =========================
+   UTIL: Tabs + Som global
+========================= */
+(function tabsAndSound(){
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.panel');
+  tabs.forEach(t => {
+    t.addEventListener('click', ()=>{
+      const key = t.dataset.tab;
+      tabs.forEach(x => x.classList.toggle('active', x===t));
+      panels.forEach(p => p.classList.toggle('active', p.id === `panel-${key}`));
+      // quando muda para sílabas, garantimos foco visual nos botões grandes
+      if(key === 'syllables'){
+        const btn = document.getElementById('btnPlayWord');
+        btn && btn.focus();
+      }
+    });
+  });
+})();
+
+/* =========================
+   JOGO DE DIGITAÇÃO
+   (baseado no teu script)
+========================= */
+(function typingGame(){
   const WORDS = [
     "casa","bola","gato","pato","foca","peixe","uva","mala","pipa","fada","dado","riso","rua",
     "vaca","sapo","lobo","vila","moto","fogo","pao","suco","tatu","mato","pulo","pelo","dedo",
@@ -102,12 +126,11 @@
     return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  // ======= Sons (Web Audio) =======
+  /* Sons (Web Audio) */
   let audioCtx = null;
   function ensureAudio(){
     if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  // tipos: 'ok' (acerto), 'err' (erro), 'show' (apareceu nova letra/palavra)
   function playTone(type='ok'){
     if(!soundToggle.checked) return;
     ensureAudio();
@@ -124,8 +147,9 @@
     o.stop(now + 0.25);
   }
 
-  // ======= Falar (Speech Synthesis) =======
+  /* Falar (Speech Synthesis) */
   function speakTarget(){
+    if(!soundToggle.checked) return;
     const t = target.toUpperCase();
     const u = new SpeechSynthesisUtterance(t);
     u.lang = 'pt-BR';
@@ -134,7 +158,7 @@
     speechSynthesis.speak(u);
   }
 
-  // ======= Util =======
+  /* Util */
   function pickLetter(){
     const code = 97 + Math.floor(Math.random()*26);
     return String.fromCharCode(code);
@@ -148,7 +172,6 @@
     wordChars.hidden = mode!=='words';
     wordChars.setAttribute('aria-hidden', mode!=='words');
     typebox.placeholder = mode==='letters' ? 'Digite a letra…' : 'Digite a palavra…';
-    // Reset TOTAL ao trocar modalidade
     hardReset();
     renderRanking();
   }
@@ -169,18 +192,15 @@
       attemptsLeft = MAX_ATTEMPTS;
       target = pickLetter();
       promptEl.textContent = target.toUpperCase();
-      msgNeutral(`Qual é a letra? Você tem ${attemptsLeft} tentativas.`);
+      msgNeutral(`Qual é a letra?`);
     }else{
       target = pickWord();
       promptEl.textContent = target.toUpperCase();
       renderWordCharacters();
-      msgNeutral('Digite devagar, sem pressa 😊');
+      msgNeutral('Devagar 😊');
     }
     if(resetInput) typebox.value = '';
-    // Som ao aparecer nova letra/palavra
     playTone('show');
-    // 👇 FALAR AUTOMATICAMENTE TODA VEZ QUE APARECER
-    // pequena espera para garantir atualização visual antes da fala
     setTimeout(speakTarget, 60);
   }
 
@@ -189,7 +209,7 @@
     if(!n){
       n = prompt('Qual é o seu nome?');
       if(!n || !n.trim()){
-        msgBad('Precisamos do seu nome para começar 😊');
+        msgBad('Precisamos do seu nome 😊');
         playerNameInput.focus();
         return;
       }
@@ -228,7 +248,7 @@
     typebox.disabled = true;
     setProgress(0);
     statusEl.textContent = `Fim! Pontos: ${score}. Acertos: ${hits}, Erros: ${misses}.`;
-    msgNeutral('Acabou o tempo! Quer jogar de novo?');
+    msgNeutral('Acabou! Quer jogar de novo?');
 
     const name = (playerNameInput.value || '').trim() || 'Jogador';
     saveScore(mode, name, score);
@@ -253,7 +273,7 @@
     wordChars.innerHTML = '';
     wordChars.hidden = (mode!=='words');
     statusEl.textContent = 'Aguardando início…';
-    msgNeutral('Pronto para jogar 🎯');
+    msgNeutral('Pronto 🎯');
   }
 
   function setProgress(p){ bar.style.transform = `scaleX(${Math.max(0, Math.min(1, p))})` }
@@ -298,9 +318,9 @@
         msgGood('Muito bem! 🎉');
         promptEl.style.transform = 'scale(1.06)';
         setTimeout(()=>{ promptEl.style.transform='scale(1)'; }, 120);
+        if(soundToggle.checked) celebrate();
         playTone('ok');
-        celebrate();
-        nextTarget(true); // falará automaticamente
+        nextTarget(true);
       }else{
         attemptsLeft--;
         misses++; missesEl.textContent = misses;
@@ -308,11 +328,11 @@
         setTimeout(()=>promptEl.classList.remove('shake'), 200);
         playTone('err');
         if(attemptsLeft>0){
-          msgBad(`Ops, tente de novo! (${MAX_ATTEMPTS - attemptsLeft}/${MAX_ATTEMPTS})`);
+          msgBad(`Ops, tente de novo!`);
           typebox.value = '';
         }else{
-          msgBad(`Quase! Era "${target.toUpperCase()}". Vamos para a próxima!`);
-          nextTarget(true); // falará automaticamente
+          msgBad(`Quase! Era "${target.toUpperCase()}".`);
+          nextTarget(true);
         }
       }
     }else{
@@ -339,27 +359,26 @@
       if(lastPos>=0 && (value[lastPos] !== (target[lastPos]||''))){
         misses++; missesEl.textContent = misses;
         promptEl.classList.add('shake'); setTimeout(()=>promptEl.classList.remove('shake'), 160);
-        msgBad('Tem algo diferente… tente devagar 😊');
+        msgBad('Tem algo diferente…');
         playTone('err');
       }else if(awarded>0){
         msgGood('Isso! Continue…');
         playTone('ok');
       }
-
       if(value === target){
-        celebrate();
-        setTimeout(()=> nextTarget(true), 300); // falará automaticamente
+        if(soundToggle.checked) celebrate();
+        setTimeout(()=> nextTarget(true), 250);
       }
     }
   }
 
   function skip(){
     if(!running) return;
-    msgNeutral('Pulou. Sem pontos nem penalidade.');
-    nextTarget(true); // falará automaticamente
+    msgNeutral('Pulou 👍');
+    nextTarget(true);
   }
 
-  // ======= Eventos =======
+  /* Eventos */
   startBtn.addEventListener('click', start);
   resetBtn.addEventListener('click', hardReset);
   skipBtn.addEventListener('click', skip);
@@ -369,10 +388,342 @@
   speakBtn.addEventListener('click', speakTarget);
   playerNameInput.addEventListener('change', savePlayerName);
 
-  // ======= Inicial =======
+  /* Inicial */
   loadPlayerName();
   setMode(modeSel.value);
   setProgress(1);
   timeLeftEl.textContent = 120;
+})();
 
+/* =========================
+   JOGO DE SÍLABAS
+========================= */
+(function syllablesGame(){
+  // Palavras do jogo (sílabas e um emoji)
+  const WORDS = [
+    { word: 'GATO', syllables: ['GA', 'TO'], emoji: '🐱' },
+    { word: 'MALA', syllables: ['MA', 'LA'], emoji: '👜' },
+    { word: 'SAPO', syllables: ['SA', 'PO'], emoji: '🐸' },
+    { word: 'COCO', syllables: ['CO', 'CO'], emoji: '🥥' },
+    { word: 'BOLO', syllables: ['BO', 'LO'], emoji: '🍰' },
+    { word: 'PATO', syllables: ['PA', 'TO'], emoji: '🦆' },
+    { word: 'FADA', syllables: ['FA', 'DA'], emoji: '🧚' },
+    { word: 'BOLA', syllables: ['BO', 'LA'], emoji: '🏐' },
+    { word: 'CAMA', syllables: ['CA', 'MA'], emoji: '🛏️' },
+    { word: 'RATO', syllables: ['RA', 'TO'], emoji: '🐭' },
+    { word: 'NAVE', syllables: ['NA', 'VE'], emoji: '🚀' },
+    { word: 'PANELA', syllables: ['PA', 'NE', 'LA'], emoji: '🍲' },
+    { word: 'AVE', syllables: ['A', 'VE'], emoji: '🦩' },
+    { word: 'TUBA', syllables: ['TU', 'BA'], emoji: '🎺' },
+    { word: 'FOGO', syllables: ['FO', 'GO'], emoji: '🔥' },
+    { word: 'VACA', syllables: ['VA', 'CA'], emoji: '🐄' },
+    { word: 'MOTO', syllables: ['MO', 'TO'], emoji: '🏍️' },
+    { word: 'DADO', syllables: ['DA', 'DO'], emoji: '🎲' },
+    { word: 'LUA', syllables: ['LU', 'A'], emoji: '🌙' },
+    { word: 'PIPA', syllables: ['PI', 'PA'], emoji: '🪁' },
+    { word: 'GALO', syllables: ['GA', 'LO'], emoji: '🐓' },
+    { word: 'SINO', syllables: ['SI', 'NO'], emoji: '🔔' },
+    { word: 'BIFE', syllables: ['BI', 'FE'], emoji: '🥩' },
+    { word: 'FONE', syllables: ['FO', 'NE'], emoji: '🎧' },
+    { word: 'MENINA', syllables: ['ME','NI', 'NA'], emoji: '💇‍♀️' },
+    { word: 'CANOA', syllables: ['CA', 'NO', 'A'], emoji: '🛶' },
+    { word: 'SABONETE', syllables: ['SA', 'BO', 'NE', 'TE'], emoji: '🧼' },
+    { word: 'JACARE', syllables: ['JA', 'CA', 'RE'], emoji: '🐊' },
+    { word: 'ABACAXI', syllables: ['A', 'BA', 'CA', 'XI'], emoji: '🍍' }
+  ];
+
+  // Distratores
+  const DISTRACTOR_POOL = [
+    'LA','LE','LI','LO','LU',
+    'BA','BE','BI','BU',
+    'TA','TE','TI','TU',
+    'RA','RE','RI','RO','RU',
+    'FA','FE','FI','FO','FU',
+    'NA','NE','NI','NO','NU',
+    'GA','GE','GI','GO','GU',
+    'CA','CE','CI','CO','CU',
+    'PA','PE','PI','PO','PU',
+    'VO','VA','VE','VI','VU',
+    'A','E','I','O','U'
+  ];
+
+  // Mapa de fala para sílabas (pt-BR)
+  const SYLLABLE_SAY = {
+    'A':'á','E':'é','I':'i','O':'ó','U':'u',
+    'PA': 'pá', 'PE': 'pê', 'PI': 'pi', 'PO': 'pô', 'PU': 'pu',
+    'BA': 'bá', 'BE': 'bê', 'BI': 'bi', 'BO': 'bô', 'BU': 'bu',
+    'MA': 'má', 'ME': 'mê', 'MI': 'mi', 'MO': 'mô', 'MU': 'mu',
+    'LA': 'lá', 'LE': 'lê', 'LI': 'li', 'LO': 'lô', 'LU': 'lu',
+    'SA': 'sá', 'SE': 'sê', 'SI': 'si', 'SO': 'sô', 'SU': 'su',
+    'GA': 'gá', 'GE': 'jê', 'GI': 'ji', 'GO': 'gô', 'GU': 'gu',
+    'CA': 'cá', 'CE': 'cê', 'CI': 'ci', 'CO': 'cô', 'CU': 'cu',
+    'DA': 'dá', 'DE': 'dê', 'DI': 'di', 'DO': 'dô', 'DU': 'du',
+    'TA': 'tá', 'TE': 'tê', 'TI': 'tchi', 'TO': 'tô', 'TU': 'tu',
+    'NA': 'ná', 'NE': 'nê', 'NI': 'ni', 'NO': 'nô', 'NU': 'nu',
+    'RA': 'rá', 'RE': 'rê', 'RI': 'ri', 'RO': 'rô', 'RU': 'ru',
+    'FA': 'fá', 'FE': 'fê', 'FI': 'fi', 'FO': 'fô', 'FU': 'fu',
+    'VO': 'vô', 'VA': 'vá', 'VE': 'vê', 'VI': 'vi', 'VU': 'vu',
+    'JA': 'já', 'JE': 'jê', 'JI': 'ji', 'JO': 'jô', 'JU': 'ju',
+    'XI': 'xí'
+  };
+
+  const $ = id => document.getElementById(id);
+  const bank = $('bank');
+  const dropZone = $('dropZone');
+  const imageWrap = $('imageWrap');
+  const feedback = $('feedback');
+  const voiceHint = $('voiceHint');
+  const syllableDisplay = $('syllableDisplay');
+  const soundToggle = $('soundToggle');
+  const confettiCanvas = $('confettiFull');
+  const ctx = confettiCanvas.getContext('2d');
+
+  let preferredVoice = null;
+  function pickVoice() {
+    const voices = speechSynthesis.getVoices();
+    preferredVoice =
+      voices.find(v => /pt(-|_)BR/i.test(v.lang)) ||
+      voices.find(v => v.lang.startsWith('pt')) ||
+      voices[0] || null;
+    if (preferredVoice) voiceHint.textContent = `Voz: ${preferredVoice.name} (${preferredVoice.lang})`;
+  }
+  window.speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
+
+  function speak(text, rate = 0.9, pitch = 1) {
+    if(!soundToggle.checked) return;
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    if (preferredVoice) u.voice = preferredVoice;
+    u.lang = preferredVoice?.lang || 'pt-BR';
+    u.rate = rate; u.pitch = pitch;
+    window.speechSynthesis.speak(u);
+  }
+  function speakAsync(text, rate = 0.9, pitch = 1) {
+    return new Promise(resolve => {
+      if(!soundToggle.checked) return resolve();
+      if (!('speechSynthesis' in window)) return resolve();
+      const u = new SpeechSynthesisUtterance(text);
+      if (preferredVoice) u.voice = preferredVoice;
+      u.lang = preferredVoice?.lang || 'pt-BR';
+      u.rate = rate; u.pitch = pitch;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  let currentIndex = 0;
+  let current = WORDS[currentIndex];
+  let playSeqId = 0;
+
+  function shuffle(arr) { return arr.map(v => [Math.random(), v]).sort((a,b) => a[0]-b[0]).map(x => x[1]); }
+
+  function createDraggable(text) {
+    const el = document.createElement('button');
+    el.textContent = text;
+    el.className = 'syllable-card';
+    el.draggable = true;
+    el.dataset.syllable = text;
+
+    el.addEventListener('dragstart', (e) => {
+      el.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', text);
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('click', () => saySyllable(text));
+    return el;
+  }
+
+  function createDropSlot(index) {
+    const slot = document.createElement('div');
+    slot.className = 'drop-slot';
+    slot.dataset.index = index;
+
+    slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('is-hover'); });
+    slot.addEventListener('dragleave', () => { slot.classList.remove('is-hover'); });
+    slot.addEventListener('drop', (e) => {
+      e.preventDefault(); slot.classList.remove('is-hover');
+      const text = e.dataTransfer.getData('text/plain');
+      if (slot.firstChild) bank.appendChild(slot.firstChild);
+      slot.textContent = '';
+      slot.appendChild(createDraggable(text));
+      slot.classList.add('filled');
+      validateProgress();
+    });
+    return slot;
+  }
+
+  function buildSyllableDisplay() {
+    syllableDisplay.innerHTML = '';
+    current.syllables.forEach(syl => {
+      const chip = document.createElement('div');
+      chip.className = 'display-syllable';
+      chip.dataset.displaySyl = syl;
+      chip.textContent = syl;
+      syllableDisplay.appendChild(chip);
+    });
+  }
+
+  function makeDistractors(targetSyllables) {
+    const need = Math.random() < 0.5 ? 1 : 2;
+    const setTarget = new Set(targetSyllables);
+    const pool = DISTRACTOR_POOL.filter(s => !setTarget.has(s));
+    const picked = new Set();
+    while (picked.size < need && pool.length > 0) {
+      picked.add(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    return [...picked];
+  }
+
+  function saySyllable(syl) {
+    const say = SYLLABLE_SAY[syl] || syl.toLowerCase();
+    speak(say + '.', 0.9, 1);
+  }
+
+  async function playSyllablesSynced(sylls) {
+    window.speechSynthesis.cancel();
+    if(!soundToggle.checked) return;
+    const mySeq = ++playSeqId;
+    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
+    const poolBySyl = {};
+    nodes.forEach(n => {
+      const syl = n.dataset.displaySyl;
+      (poolBySyl[syl] ||= []).push(n);
+    });
+
+    for (const syl of sylls) {
+      if (mySeq !== playSeqId) return;
+      const list = poolBySyl[syl] || [];
+      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
+
+      if (node) node.classList.add('blink');
+      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
+      if (node) node.classList.remove('blink');
+    }
+  }
+
+  async function speakWord(word) {
+    const pretty = {
+      GATO:'gato', MALA:'mala', SAPO:'sapo', COCO:'coco', BOLO:'bolo', PATO:'pato',
+      FADA:'fada', BOLA:'bola', CAMA:'cama', RATO:'rato', NAVE:'nave', AVE:'ave',
+      TUBA:'tuba', FOGO:'fogo', VACA:'vaca', MOTO:'moto', DADO:'dado', LUA:'lua',
+      PIPA:'pipa', GALO:'galo', SINO:'sino', BIFE:'bife', FONE:'fone',
+      MENINA:'menina', CANOA:'canoa', SABONETE:'sabonete', JACARE:'jacaré',
+      ABACAXI:'abacaxi'
+    };
+    await speakAsync(pretty[word] || word.toLowerCase(), 0.9, 1);
+  }
+
+  async function onPlayWord() {
+    window.speechSynthesis.cancel();
+    const mySeq = ++playSeqId;
+    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
+    const poolBySyl = {};
+    nodes.forEach(n => {
+      const syl = n.dataset.displaySyl;
+      (poolBySyl[syl] ||= []).push(n);
+    });
+
+    for (const syl of current.syllables) {
+      if (mySeq !== playSeqId) return;
+      const list = poolBySyl[syl] || [];
+      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
+
+      if (node) node.classList.add('blink');
+      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
+      if (node) node.classList.remove('blink');
+    }
+    if (mySeq !== playSeqId) return;
+    await speakWord(current.word);
+  }
+
+  async function promptRepeat() {
+    window.speechSynthesis.cancel();
+    await speakAsync('Agora, repita comigo.', 0.95, 1);
+    await playSyllablesSynced(current.syllables);
+  }
+
+  function validateProgress() {
+    const slots = [...dropZone.children];
+    const attempt = slots.map(s => s.querySelector('[data-syllable]')?.dataset.syllable || null);
+    const done = attempt.every(Boolean);
+    const correct = done && attempt.join('-') === current.syllables.join('-');
+
+    if (correct) {
+      feedback.className = 'feedback';
+      feedback.textContent = 'Muito bem! Você formou a palavra!';
+      speak('Muito bem! Você formou a palavra!');
+      fireConfetti();
+      setTimeout(nextWord, 700);
+    } else if (done) {
+      feedback.className = 'feedback';
+      feedback.textContent = 'Quase! Troque a ordem.';
+      speak('Quase. Tente outra ordem.');
+    } else {
+      feedback.textContent = '';
+    }
+  }
+
+  function buildRound() {
+    current = WORDS[currentIndex];
+    imageWrap.textContent = current.emoji;
+    feedback.textContent = '';
+
+    buildSyllableDisplay();
+
+    dropZone.innerHTML = '';
+    current.syllables.forEach((_, i) => dropZone.appendChild(createDropSlot(i)));
+
+    bank.innerHTML = '';
+    const distractors = makeDistractors(current.syllables);
+    const pool = shuffle([...current.syllables, ...distractors]);
+    pool.forEach(s => bank.appendChild(createDraggable(s)));
+  }
+
+  async function setupRound() {
+    buildRound();
+    await speakAsync('Observe a figura. Vamos montar a palavra.', 0.95, 1);
+    await playSyllablesSynced(current.syllables);
+  }
+
+  function nextWord() {
+    currentIndex = (currentIndex + 1) % WORDS.length;
+    setupRound();
+  }
+
+  /* Confete tela cheia */
+  function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; }
+  window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+  function fireConfetti() {
+    const colors = ['#10b981', '#22c55e', '#fde047', '#f59e0b', '#38bdf8', '#a78bfa'];
+    const parts = Array.from({ length: 140 }, () => ({
+      x: Math.random() * confettiCanvas.width,
+      y: -10, w: 6 + Math.random() * 6, h: 8 + Math.random() * 10,
+      c: colors[Math.floor(Math.random()*colors.length)], s: 2 + Math.random() * 4,
+      r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.2,
+    }));
+
+    let frames = 0;
+    (function draw(){
+      ctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+      parts.forEach(p => {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+        p.y += p.s; p.x += Math.sin(p.y/30) * 1.2; p.r += p.vr;
+      });
+      frames++; if (frames < 260) requestAnimationFrame(draw); else ctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+    })();
+  }
+
+  /* Liga botões */
+  document.getElementById('btnPlayWord').addEventListener('click', onPlayWord);
+  document.getElementById('btnPlaySyllables').addEventListener('click', () => playSyllablesSynced(current.syllables));
+  document.getElementById('btnRepeat').addEventListener('click', promptRepeat);
+  document.getElementById('btnNext').addEventListener('click', nextWord);
+  document.getElementById('btnReset').addEventListener('click', setupRound);
+
+  /* Inicial */
+  setupRound();
 })();
