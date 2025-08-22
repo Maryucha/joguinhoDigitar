@@ -1,15 +1,28 @@
+/* ======================================================================
+   JOGUINHOS DA TIA UXA — ARQUIVO ÚNICO
+   - Abas (tabs) e utilidades
+   - Jogo de Digitação (Letras A–Z / Palavras simples)
+   - Jogo de Sílabas (arrastar e montar)
+   Observações:
+   • Usa o mesmo controle de som (#soundToggle) para tudo.
+   • Não depende de nenhum toggle/checkbox extra além do que está no seu HTML.
+   • IDs batem com o seu index.html.
+====================================================================== */
+
+
 /* =========================
-   UTIL: Tabs + Som global
+   1) ABAS (TABS) + PEQUENAS UTILS
 ========================= */
 (function tabsAndSound(){
   const tabs = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.panel');
+
   tabs.forEach(t => {
     t.addEventListener('click', ()=>{
       const key = t.dataset.tab;
       tabs.forEach(x => x.classList.toggle('active', x===t));
       panels.forEach(p => p.classList.toggle('active', p.id === `panel-${key}`));
-      // quando muda para sílabas, garantimos foco visual nos botões grandes
+      // foco amigável ao trocar para sílabas
       if(key === 'syllables'){
         const btn = document.getElementById('btnPlayWord');
         btn && btn.focus();
@@ -18,11 +31,13 @@
   });
 })();
 
+
 /* =========================
-   JOGO DE DIGITAÇÃO
-   (baseado no teu script)
+   2) JOGO DE DIGITAÇÃO
+   (Letras A–Z e Palavras simples)
 ========================= */
 (function typingGame(){
+  // Palavras simples para o modo "words"
   const WORDS = [
     "casa","bola","gato","pato","foca","peixe","uva","mala","pipa","fada","dado","riso","rua",
     "vaca","sapo","lobo","vila","moto","fogo","pao","suco","tatu","mato","pulo","pelo","dedo",
@@ -30,30 +45,32 @@
     "verde","amarelo","azul","rosa","cabelo","nariz","dente","livro","papel","lapis","folha"
   ];
 
+  // ===== Refs do DOM (IDs batendo com seu HTML) =====
   const el = (id)=>document.getElementById(id);
   const playerNameInput = el('playerName');
-  const modeSel = el('mode');
-  const secondsInput = el('seconds');
-  const startBtn = el('startBtn');
-  const resetBtn = el('resetBtn');
-  const skipBtn = el('skipBtn');
-  const typebox = el('typebox');
-  const promptEl = el('prompt');
-  const wordChars = el('wordChars');
-  const scoreEl = el('score');
-  const hitsEl = el('hits');
-  const missesEl = el('misses');
-  const timeLeftEl = el('timeLeft');
-  const bar = el('bar');
-  const statusEl = el('status');
-  const bubble = el('bubble');
-  const confetti = el('confetti');
-  const soundToggle = el('soundToggle');
-  const speakBtn = el('speakBtn');
-  const rankList = el('rankList');
+  const modeSel       = el('mode');          // <select> (letters | words)
+  const secondsInput  = el('seconds');
+  const startBtn      = el('startBtn');
+  const resetBtn      = el('resetBtn');
+  const skipBtn       = el('skipBtn');
+  const typebox       = el('typebox');
+  const promptEl      = el('prompt');
+  const wordChars     = el('wordChars');
+  const scoreEl       = el('score');
+  const hitsEl        = el('hits');
+  const missesEl      = el('misses');
+  const timeLeftEl    = el('timeLeft');
+  const bar           = el('bar');
+  const footerStatus  = el('status');        // no rodapé
+  const bubble        = el('bubble');
+  const confettiLocal = el('confettiLocal'); // confete local do typing
+  const soundToggle   = el('soundToggle');   // mesmo do cabeçalho
+  const speakBtn      = el('speakBtn');
+  const rankList      = el('rankList');
   const rankModeBadge = el('rankModeBadge');
 
-  let mode = 'letters';
+  // ===== Estado =====
+  let mode   = 'letters'; // 'letters' | 'words'
   let target = '';
   let score = 0, hits = 0, misses = 0;
   let totalTime = 120, timeLeft = 120, timer = null, running = false;
@@ -61,7 +78,8 @@
   const MAX_ATTEMPTS = 3;
   let attemptsLeft = MAX_ATTEMPTS;
 
-  const LS_NAME = 'typingGame.playerName';
+  // ===== Ranking/Storage =====
+  const LS_NAME   = 'typingGame.playerName';
   const LS_SCORES = 'typingGame.scores';
 
   function loadPlayerName(){
@@ -72,7 +90,6 @@
     const n = (playerNameInput.value || '').trim();
     if(n) localStorage.setItem(LS_NAME, n);
   }
-
   function loadScores(){
     try{
       const raw = localStorage.getItem(LS_SCORES);
@@ -84,7 +101,6 @@
       };
     }catch{ return { letters: [], words: [] } }
   }
-
   function saveScore(currentMode, name, scoreValue){
     const data = loadScores();
     const arr = data[currentMode] || [];
@@ -95,13 +111,11 @@
     data[currentMode] = arr;
     localStorage.setItem(LS_SCORES, JSON.stringify(data));
   }
-
   function getRanking(currentMode){
     const data = loadScores();
     const arr = data[currentMode] || [];
     return [...arr].sort((a,b)=> (b.score - a.score) || (b.date - a.date)).slice(0, 10);
   }
-
   function renderRanking(){
     rankModeBadge.textContent = (mode === 'letters') ? 'Letras (A–Z)' : 'Palavras simples';
     const ranking = getRanking(mode);
@@ -121,16 +135,13 @@
       rankList.appendChild(li);
     }
   }
-
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  /* Sons (Web Audio) */
+  // ===== Sons (Web Audio) =====
   let audioCtx = null;
-  function ensureAudio(){
-    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
+  function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
   function playTone(type='ok'){
     if(!soundToggle.checked) return;
     ensureAudio();
@@ -143,11 +154,10 @@
     const now = audioCtx.currentTime;
     g.gain.exponentialRampToValueAtTime(0.1, now + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, now + (type==='ok' ? 0.18 : (type==='err' ? 0.22 : 0.16)));
-    o.start(now);
-    o.stop(now + 0.25);
+    o.start(now); o.stop(now + 0.25);
   }
 
-  /* Falar (Speech Synthesis) */
+  // ===== Falar (Speech Synthesis) =====
   function speakTarget(){
     if(!soundToggle.checked) return;
     const t = target.toUpperCase();
@@ -158,13 +168,35 @@
     speechSynthesis.speak(u);
   }
 
-  /* Util */
-  function pickLetter(){
-    const code = 97 + Math.floor(Math.random()*26);
-    return String.fromCharCode(code);
-  }
+  // ===== Util =====
+  function pickLetter(){ const code = 97 + Math.floor(Math.random()*26); return String.fromCharCode(code); }
   function pickWord(){ return WORDS[Math.floor(Math.random()*WORDS.length)] }
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)) }
+  function setProgress(p){ bar.style.transform = `scaleX(${Math.max(0, Math.min(1, p))})` }
+  function msgGood(text){ bubble.className='status-bubble good'; bubble.textContent=text }
+  function msgBad(text){ bubble.className='status-bubble bad'; bubble.textContent=text }
+  function msgNeutral(text){ bubble.className='status-bubble'; bubble.textContent=text }
+  function normalize(s){ return s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase(); }
 
+  function celebrate(){
+    const colors = ['#bbf7d0','#a7f3d0','#bfdbfe','#fde68a','#fecaca'];
+    for(let i=0;i<10;i++){
+      const d = document.createElement('div');
+      d.className='dot';
+      const x = Math.random()*100;
+      const xEnd = x + (Math.random()*20-10);
+      const y = 200 + Math.random()*60;
+      d.style.left = x+'%';
+      d.style.setProperty('--x', '0px');
+      d.style.setProperty('--x-end', (xEnd - x)*3 + 'px');
+      d.style.setProperty('--y', y+'px');
+      d.style.background = colors[i%colors.length];
+      confettiLocal.appendChild(d);
+      setTimeout(()=>d.remove(), 900);
+    }
+  }
+
+  // ===== Lógica principal =====
   function setMode(m){
     mode = m;
     promptEl.classList.toggle('letter', mode==='letters');
@@ -197,7 +229,7 @@
       target = pickWord();
       promptEl.textContent = target.toUpperCase();
       renderWordCharacters();
-      msgNeutral('Devagar 😊');
+      msgNeutral('Digite devagar 😊');
     }
     if(resetInput) typebox.value = '';
     playTone('show');
@@ -230,7 +262,7 @@
     typebox.disabled = false;
     typebox.focus();
     running = true;
-    statusEl.textContent = 'Valendo! ⏱️';
+    footerStatus.textContent = 'Valendo! ⏱️';
 
     clearInterval(timer);
     timer = setInterval(()=>{
@@ -247,7 +279,7 @@
     running = false;
     typebox.disabled = true;
     setProgress(0);
-    statusEl.textContent = `Fim! Pontos: ${score}. Acertos: ${hits}, Erros: ${misses}.`;
+    footerStatus.textContent = `Fim! Pontos: ${score}. Acertos: ${hits}, Erros: ${misses}.`;
     msgNeutral('Acabou! Quer jogar de novo?');
 
     const name = (playerNameInput.value || '').trim() || 'Jogador';
@@ -272,37 +304,8 @@
     promptEl.textContent = 'Digite seu nome e clique em “Começar”';
     wordChars.innerHTML = '';
     wordChars.hidden = (mode!=='words');
-    statusEl.textContent = 'Aguardando início…';
+    footerStatus.textContent = 'Aguardando início…';
     msgNeutral('Pronto 🎯');
-  }
-
-  function setProgress(p){ bar.style.transform = `scaleX(${Math.max(0, Math.min(1, p))})` }
-  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)) }
-
-  function msgGood(text){ bubble.className='status-bubble good'; bubble.textContent=text }
-  function msgBad(text){ bubble.className='status-bubble bad'; bubble.textContent=text }
-  function msgNeutral(text){ bubble.className='status-bubble'; bubble.textContent=text }
-
-  function celebrate(){
-    const colors = ['#bbf7d0','#a7f3d0','#bfdbfe','#fde68a','#fecaca'];
-    for(let i=0;i<10;i++){
-      const d = document.createElement('div');
-      d.className='dot';
-      const x = Math.random()*100;
-      const xEnd = x + (Math.random()*20-10);
-      const y = 200 + Math.random()*60;
-      d.style.left = x+'%';
-      d.style.setProperty('--x', '0px');
-      d.style.setProperty('--x-end', (xEnd - x)*3 + 'px');
-      d.style.setProperty('--y', y+'px');
-      d.style.background = colors[i%colors.length];
-      confetti.appendChild(d);
-      setTimeout(()=>d.remove(), 900);
-    }
-  }
-
-  function normalize(s){
-    return s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
   }
 
   function onInput(){
@@ -328,7 +331,7 @@
         setTimeout(()=>promptEl.classList.remove('shake'), 200);
         playTone('err');
         if(attemptsLeft>0){
-          msgBad(`Ops, tente de novo!`);
+          msgBad('Ops, tente de novo!');
           typebox.value = '';
         }else{
           msgBad(`Quase! Era "${target.toUpperCase()}".`);
@@ -336,6 +339,7 @@
         }
       }
     }else{
+      // modo 'words'
       let awarded = 0;
       for(let i=0; i<value.length; i++){
         const correct = target[i] || '';
@@ -372,35 +376,31 @@
     }
   }
 
-  function skip(){
-    if(!running) return;
-    msgNeutral('Pulou 👍');
-    nextTarget(true);
-  }
-
-  /* Eventos */
+  // ===== Eventos =====
   startBtn.addEventListener('click', start);
   resetBtn.addEventListener('click', hardReset);
-  skipBtn.addEventListener('click', skip);
+  skipBtn.addEventListener('click', ()=>{ if(!running) return; msgNeutral('Pulou 👍'); nextTarget(true); });
   modeSel.addEventListener('change', ()=> setMode(modeSel.value));
   typebox.addEventListener('input', onInput);
   typebox.addEventListener('blur', ()=>{ if(running) typebox.focus() });
   speakBtn.addEventListener('click', speakTarget);
   playerNameInput.addEventListener('change', savePlayerName);
 
-  /* Inicial */
+  // ===== Init =====
   loadPlayerName();
   setMode(modeSel.value);
   setProgress(1);
   timeLeftEl.textContent = 120;
 })();
 
+
 /* =========================
-   JOGO DE SÍLABAS
+   3) JOGO DE SÍLABAS (ARRASTAR)
 ========================= */
+
 (function syllablesGame(){
-  // Palavras do jogo (sílabas e um emoji)
-  const WORDS = [
+  // ---------- Palavras (sílabas + emoji) ----------
+  const SYLLABLE_WORDS = [
     { word: 'GATO', syllables: ['GA', 'TO'], emoji: '🐱' },
     { word: 'MALA', syllables: ['MA', 'LA'], emoji: '👜' },
     { word: 'SAPO', syllables: ['SA', 'PO'], emoji: '🐸' },
@@ -432,7 +432,7 @@
     { word: 'ABACAXI', syllables: ['A', 'BA', 'CA', 'XI'], emoji: '🍍' }
   ];
 
-  // Distratores
+  // ---------- Distratores ----------
   const DISTRACTOR_POOL = [
     'LA','LE','LI','LO','LU',
     'BA','BE','BI','BU',
@@ -447,7 +447,7 @@
     'A','E','I','O','U'
   ];
 
-  // Mapa de fala para sílabas (pt-BR)
+  // ---------- “Como falar” sílabas (pt-BR) ----------
   const SYLLABLE_SAY = {
     'A':'á','E':'é','I':'i','O':'ó','U':'u',
     'PA': 'pá', 'PE': 'pê', 'PI': 'pi', 'PO': 'pô', 'PU': 'pu',
@@ -467,231 +467,28 @@
     'XI': 'xí'
   };
 
-  const $ = id => document.getElementById(id);
-  const bank = $('bank');
-  const dropZone = $('dropZone');
-  const imageWrap = $('imageWrap');
-  const feedback = $('feedback');
-  const voiceHint = $('voiceHint');
+  // ---------- Helpers ----------
+  const $ = (id)=>document.getElementById(id);
+
+  // ---------- DOM refs (IDs do seu HTML) ----------
+  const bank            = $('bank');
+  const dropZone        = $('dropZone');
+  const imageWrap       = $('imageWrap');
+  const feedback        = $('feedback');
+  const voiceHint       = $('voiceHint');
   const syllableDisplay = $('syllableDisplay');
-  const soundToggle = $('soundToggle');
-  const confettiCanvas = $('confettiFull');
+
+  const btnPlayWord      = $('btnPlayWord');
+  const btnPlaySyllables = $('btnPlaySyllables');
+  const btnRepeat        = $('btnRepeat');
+  const btnNext          = $('btnNext');
+  const btnReset         = $('btnReset');
+
+  const soundToggle      = $('soundToggle');
+
+  // ---------- Confete tela cheia ----------
+  const confettiCanvas = $('confetti');
   const ctx = confettiCanvas.getContext('2d');
-
-  let preferredVoice = null;
-  function pickVoice() {
-    const voices = speechSynthesis.getVoices();
-    preferredVoice =
-      voices.find(v => /pt(-|_)BR/i.test(v.lang)) ||
-      voices.find(v => v.lang.startsWith('pt')) ||
-      voices[0] || null;
-    if (preferredVoice) voiceHint.textContent = `Voz: ${preferredVoice.name} (${preferredVoice.lang})`;
-  }
-  window.speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
-
-  function speak(text, rate = 0.9, pitch = 1) {
-    if(!soundToggle.checked) return;
-    if (!('speechSynthesis' in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    if (preferredVoice) u.voice = preferredVoice;
-    u.lang = preferredVoice?.lang || 'pt-BR';
-    u.rate = rate; u.pitch = pitch;
-    window.speechSynthesis.speak(u);
-  }
-  function speakAsync(text, rate = 0.9, pitch = 1) {
-    return new Promise(resolve => {
-      if(!soundToggle.checked) return resolve();
-      if (!('speechSynthesis' in window)) return resolve();
-      const u = new SpeechSynthesisUtterance(text);
-      if (preferredVoice) u.voice = preferredVoice;
-      u.lang = preferredVoice?.lang || 'pt-BR';
-      u.rate = rate; u.pitch = pitch;
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
-      window.speechSynthesis.speak(u);
-    });
-  }
-
-  let currentIndex = 0;
-  let current = WORDS[currentIndex];
-  let playSeqId = 0;
-
-  function shuffle(arr) { return arr.map(v => [Math.random(), v]).sort((a,b) => a[0]-b[0]).map(x => x[1]); }
-
-  function createDraggable(text) {
-    const el = document.createElement('button');
-    el.textContent = text;
-    el.className = 'syllable-card';
-    el.draggable = true;
-    el.dataset.syllable = text;
-
-    el.addEventListener('dragstart', (e) => {
-      el.classList.add('dragging');
-      e.dataTransfer.setData('text/plain', text);
-    });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
-    el.addEventListener('click', () => saySyllable(text));
-    return el;
-  }
-
-  function createDropSlot(index) {
-    const slot = document.createElement('div');
-    slot.className = 'drop-slot';
-    slot.dataset.index = index;
-
-    slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('is-hover'); });
-    slot.addEventListener('dragleave', () => { slot.classList.remove('is-hover'); });
-    slot.addEventListener('drop', (e) => {
-      e.preventDefault(); slot.classList.remove('is-hover');
-      const text = e.dataTransfer.getData('text/plain');
-      if (slot.firstChild) bank.appendChild(slot.firstChild);
-      slot.textContent = '';
-      slot.appendChild(createDraggable(text));
-      slot.classList.add('filled');
-      validateProgress();
-    });
-    return slot;
-  }
-
-  function buildSyllableDisplay() {
-    syllableDisplay.innerHTML = '';
-    current.syllables.forEach(syl => {
-      const chip = document.createElement('div');
-      chip.className = 'display-syllable';
-      chip.dataset.displaySyl = syl;
-      chip.textContent = syl;
-      syllableDisplay.appendChild(chip);
-    });
-  }
-
-  function makeDistractors(targetSyllables) {
-    const need = Math.random() < 0.5 ? 1 : 2;
-    const setTarget = new Set(targetSyllables);
-    const pool = DISTRACTOR_POOL.filter(s => !setTarget.has(s));
-    const picked = new Set();
-    while (picked.size < need && pool.length > 0) {
-      picked.add(pool[Math.floor(Math.random() * pool.length)]);
-    }
-    return [...picked];
-  }
-
-  function saySyllable(syl) {
-    const say = SYLLABLE_SAY[syl] || syl.toLowerCase();
-    speak(say + '.', 0.9, 1);
-  }
-
-  async function playSyllablesSynced(sylls) {
-    window.speechSynthesis.cancel();
-    if(!soundToggle.checked) return;
-    const mySeq = ++playSeqId;
-    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
-    const poolBySyl = {};
-    nodes.forEach(n => {
-      const syl = n.dataset.displaySyl;
-      (poolBySyl[syl] ||= []).push(n);
-    });
-
-    for (const syl of sylls) {
-      if (mySeq !== playSeqId) return;
-      const list = poolBySyl[syl] || [];
-      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
-
-      if (node) node.classList.add('blink');
-      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
-      if (node) node.classList.remove('blink');
-    }
-  }
-
-  async function speakWord(word) {
-    const pretty = {
-      GATO:'gato', MALA:'mala', SAPO:'sapo', COCO:'coco', BOLO:'bolo', PATO:'pato',
-      FADA:'fada', BOLA:'bola', CAMA:'cama', RATO:'rato', NAVE:'nave', AVE:'ave',
-      TUBA:'tuba', FOGO:'fogo', VACA:'vaca', MOTO:'moto', DADO:'dado', LUA:'lua',
-      PIPA:'pipa', GALO:'galo', SINO:'sino', BIFE:'bife', FONE:'fone',
-      MENINA:'menina', CANOA:'canoa', SABONETE:'sabonete', JACARE:'jacaré',
-      ABACAXI:'abacaxi'
-    };
-    await speakAsync(pretty[word] || word.toLowerCase(), 0.9, 1);
-  }
-
-  async function onPlayWord() {
-    window.speechSynthesis.cancel();
-    const mySeq = ++playSeqId;
-    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
-    const poolBySyl = {};
-    nodes.forEach(n => {
-      const syl = n.dataset.displaySyl;
-      (poolBySyl[syl] ||= []).push(n);
-    });
-
-    for (const syl of current.syllables) {
-      if (mySeq !== playSeqId) return;
-      const list = poolBySyl[syl] || [];
-      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
-
-      if (node) node.classList.add('blink');
-      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
-      if (node) node.classList.remove('blink');
-    }
-    if (mySeq !== playSeqId) return;
-    await speakWord(current.word);
-  }
-
-  async function promptRepeat() {
-    window.speechSynthesis.cancel();
-    await speakAsync('Agora, repita comigo.', 0.95, 1);
-    await playSyllablesSynced(current.syllables);
-  }
-
-  function validateProgress() {
-    const slots = [...dropZone.children];
-    const attempt = slots.map(s => s.querySelector('[data-syllable]')?.dataset.syllable || null);
-    const done = attempt.every(Boolean);
-    const correct = done && attempt.join('-') === current.syllables.join('-');
-
-    if (correct) {
-      feedback.className = 'feedback';
-      feedback.textContent = 'Muito bem! Você formou a palavra!';
-      speak('Muito bem! Você formou a palavra!');
-      fireConfetti();
-      setTimeout(nextWord, 700);
-    } else if (done) {
-      feedback.className = 'feedback';
-      feedback.textContent = 'Quase! Troque a ordem.';
-      speak('Quase. Tente outra ordem.');
-    } else {
-      feedback.textContent = '';
-    }
-  }
-
-  function buildRound() {
-    current = WORDS[currentIndex];
-    imageWrap.textContent = current.emoji;
-    feedback.textContent = '';
-
-    buildSyllableDisplay();
-
-    dropZone.innerHTML = '';
-    current.syllables.forEach((_, i) => dropZone.appendChild(createDropSlot(i)));
-
-    bank.innerHTML = '';
-    const distractors = makeDistractors(current.syllables);
-    const pool = shuffle([...current.syllables, ...distractors]);
-    pool.forEach(s => bank.appendChild(createDraggable(s)));
-  }
-
-  async function setupRound() {
-    buildRound();
-    await speakAsync('Observe a figura. Vamos montar a palavra.', 0.95, 1);
-    await playSyllablesSynced(current.syllables);
-  }
-
-  function nextWord() {
-    currentIndex = (currentIndex + 1) % WORDS.length;
-    setupRound();
-  }
-
-  /* Confete tela cheia */
   function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; }
   window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
@@ -717,13 +514,331 @@
     })();
   }
 
-  /* Liga botões */
-  document.getElementById('btnPlayWord').addEventListener('click', onPlayWord);
-  document.getElementById('btnPlaySyllables').addEventListener('click', () => playSyllablesSynced(current.syllables));
-  document.getElementById('btnRepeat').addEventListener('click', promptRepeat);
-  document.getElementById('btnNext').addEventListener('click', nextWord);
-  document.getElementById('btnReset').addEventListener('click', setupRound);
+  // ---------- Voz (Speech Synthesis) ----------
+  let preferredVoice = null;
+  function pickVoice() {
+    const voices = speechSynthesis.getVoices();
+    preferredVoice =
+      voices.find(v => /pt(-|_)BR/i.test(v.lang)) ||
+      voices.find(v => v.lang.startsWith('pt')) ||
+      voices[0] || null;
+    voiceHint.textContent = preferredVoice ? `Voz: ${preferredVoice.name} (${preferredVoice.lang})` : '';
+  }
+  window.speechSynthesis.onvoiceschanged = pickVoice; pickVoice();
 
-  /* Inicial */
+  function speak(text, rate = 0.9, pitch = 1) {
+    if (!soundToggle?.checked) return;
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    if (preferredVoice) u.voice = preferredVoice;
+    u.lang = preferredVoice?.lang || 'pt-BR';
+    u.rate = rate; u.pitch = pitch;
+    window.speechSynthesis.speak(u);
+  }
+  function speakAsync(text, rate = 0.9, pitch = 1) {
+    return new Promise(resolve => {
+      if (!soundToggle?.checked) return resolve();
+      if (!('speechSynthesis' in window)) return resolve();
+      const u = new SpeechSynthesisUtterance(text);
+      if (preferredVoice) u.voice = preferredVoice;
+      u.lang = preferredVoice?.lang || 'pt-BR';
+      u.rate = rate; u.pitch = pitch;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.speak(u);
+    });
+  }
+
+  // ---------- Estado ----------
+  let currentIndex = 0;
+  let current = SYLLABLE_WORDS[currentIndex];
+  let playSeqId = 0;
+
+  // ---------- Utils ----------
+  function shuffle(arr) { return arr.map(v => [Math.random(), v]).sort((a,b) => a[0]-b[0]).map(x => x[1]); }
+
+  // Exibe as sílabas no painel superior (para piscar durante TTS)
+  function buildSyllableDisplay() {
+    syllableDisplay.innerHTML = '';
+    current.syllables.forEach(syl => {
+      const chip = document.createElement('div');
+      chip.className = 'display-syllable';
+      chip.dataset.displaySyl = syl;
+      chip.textContent = syl;
+      syllableDisplay.appendChild(chip);
+    });
+  }
+
+  function makeDistractors(targetSyllables) {
+    const need = Math.random() < 0.5 ? 1 : 2;
+    const setTarget = new Set(targetSyllables);
+    const pool = DISTRACTOR_POOL.filter(s => !setTarget.has(s));
+    const picked = new Set();
+    while (picked.size < need && pool.length > 0) {
+      picked.add(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    return [...picked];
+  }
+
+  // ---------- Narração sincronizada ----------
+  async function playSyllablesSynced(sylls) {
+    if (!soundToggle?.checked) return;
+    window.speechSynthesis.cancel();
+    const mySeq = ++playSeqId;
+
+    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
+    const poolBySyl = {};
+    nodes.forEach(n => {
+      const syl = n.dataset.displaySyl;
+      (poolBySyl[syl] ||= []).push(n);
+    });
+
+    for (const syl of sylls) {
+      if (mySeq !== playSeqId) return;
+      const list = poolBySyl[syl] || [];
+      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
+
+      if (node) node.classList.add('blink');
+      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
+      if (node) node.classList.remove('blink');
+    }
+  }
+  function saySyllable(syl) {
+    const say = SYLLABLE_SAY[syl] || syl.toLowerCase();
+    speak(say + '.', 0.9, 1);
+  }
+  function speakWord(word) {
+    const pretty = {
+      GATO:'gato', MALA:'mala', SAPO:'sapo', COCO:'coco', BOLO:'bolo', PATO:'pato',
+      FADA:'fada', BOLA:'bola', CAMA:'cama', RATO:'rato', NAVE:'nave', AVE:'ave',
+      TUBA:'tuba', FOGO:'fogo', VACA:'vaca', MOTO:'moto', DADO:'dado', LUA:'lua',
+      PIPA:'pipa', GALO:'galo', SINO:'sino', BIFE:'bife', FONE:'fone',
+      MENINA:'menina', CANOA:'canoa', SABONETE:'sabonete', JACARE:'jacaré',
+      ABACAXI:'abacaxi'
+    };
+    return speakAsync(pretty[word] || word.toLowerCase(), 0.9, 1);
+  }
+  async function onPlayWord() {
+    if (!soundToggle?.checked) return;
+    window.speechSynthesis.cancel();
+    const mySeq = ++playSeqId;
+
+    const nodes = [...syllableDisplay.querySelectorAll('[data-display-syl]')];
+    const poolBySyl = {};
+    nodes.forEach(n => {
+      const syl = n.dataset.displaySyl;
+      (poolBySyl[syl] ||= []).push(n);
+    });
+
+    for (const syl of current.syllables) {
+      if (mySeq !== playSeqId) return;
+      const list = poolBySyl[syl] || [];
+      const node = list.shift?.() || nodes.find(n => n.dataset.displaySyl === syl);
+
+      if (node) node.classList.add('blink');
+      await speakAsync((SYLLABLE_SAY[syl] || syl.toLowerCase()) + '.', 0.9, 1);
+      if (node) node.classList.remove('blink');
+    }
+    if (mySeq !== playSeqId) return;
+    await speakWord(current.word);
+  }
+  async function promptRepeat() {
+    if (!soundToggle?.checked) return;
+    window.speechSynthesis.cancel();
+    await speakAsync('Agora, repita comigo.', 0.95, 1);
+    await playSyllablesSynced(current.syllables);
+  }
+
+  // ---------- Drag & Drop ----------
+  function createDropSlot(index) {
+    const slot = document.createElement('div');
+    slot.className = 'drop-slot';
+    slot.dataset.index = index;
+
+    // Desktop: DnD nativo
+    slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('is-hover'); });
+    slot.addEventListener('dragenter', (e) => { e.preventDefault(); }); // garante drop no Safari
+    slot.addEventListener('dragleave', () => { slot.classList.remove('is-hover'); });
+    slot.addEventListener('drop', (e) => {
+      e.preventDefault(); slot.classList.remove('is-hover');
+      const text = e.dataTransfer.getData('text/plain');
+      if (!text) return;
+      if (slot.firstChild) bank.appendChild(slot.firstChild);
+      slot.textContent = '';
+      slot.appendChild(createDraggable(text));
+      slot.classList.add('filled');
+      validateProgress();
+    });
+
+    return slot;
+  }
+
+  function createDraggable(text) {
+    const el = document.createElement('button');
+    el.textContent = text;
+    el.className = 'syllable-card draggable';
+    el.dataset.syllable = text;
+
+    // SEMPRE marque como draggable (para desktop),
+    // e implementamos Pointer Events para touch.
+    el.draggable = true;
+
+    // ===== Desktop: DnD nativo =====
+    el.addEventListener('dragstart', (e) => {
+      el.classList.add('dragging');
+      try { e.dataTransfer.setData('text/plain', text); } catch {}
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    el.addEventListener('click', () => saySyllable(text));
+
+    // ===== Touch: Pointer Events =====
+    // (só acionamos se NÃO for mouse, pra não conflitar com o nativo)
+    let ph = null, hoverSlot = null, moved = false, offX = 0, offY = 0;
+
+    const onMove = (e) => {
+      e.preventDefault();
+      moved = true;
+      const x = e.clientX, y = e.clientY;
+      el.style.left = (x - offX) + 'px';
+      el.style.top  = (y - offY) + 'px';
+
+      const elBelow = document.elementFromPoint(x, y);
+      const slot = elBelow && elBelow.closest('.drop-slot');
+      if (slot !== hoverSlot) {
+        if (hoverSlot) hoverSlot.classList.remove('is-hover');
+        hoverSlot = slot || null;
+        if (hoverSlot) hoverSlot.classList.add('is-hover');
+      }
+    };
+
+    const finishDrag = (e) => {
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+      el.removeEventListener('pointermove', onMove, { passive: false });
+      el.removeEventListener('pointerup', finishDrag);
+      el.removeEventListener('pointercancel', finishDrag);
+
+      if (!moved) { saySyllable(text); }
+
+      if (hoverSlot) {
+        if (hoverSlot.firstChild) bank.appendChild(hoverSlot.firstChild);
+        hoverSlot.textContent = '';
+        el.classList.remove('dragging');
+        el.style.position = '';
+        el.style.left = el.style.top = el.style.width = el.style.height = '';
+        hoverSlot.appendChild(el);
+        hoverSlot.classList.add('filled');
+        hoverSlot.classList.remove('is-hover');
+      } else {
+        el.classList.remove('dragging');
+        el.style.position = '';
+        el.style.left = el.style.top = el.style.width = el.style.height = '';
+        bank.appendChild(el);
+      }
+
+      if (ph && ph.parentNode) ph.parentNode.removeChild(ph);
+      ph = null; hoverSlot = null; moved = false;
+      validateProgress();
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;     // deixa o nativo trabalhar
+      if (e.button !== 0) return;
+
+      const r = el.getBoundingClientRect();
+      ph = document.createElement('span');
+      ph.className = 'syllable-placeholder';
+      ph.style.width = r.width + 'px';
+      ph.style.height = r.height + 'px';
+      el.parentNode.insertBefore(ph, el);
+
+      el.classList.add('dragging');
+      el.style.position = 'fixed';
+      el.style.width = r.width + 'px';
+      el.style.height = r.height + 'px';
+      el.style.left = r.left + 'px';
+      el.style.top = r.top + 'px';
+
+      offX = e.clientX - r.left;
+      offY = e.clientY - r.top;
+
+      document.body.appendChild(el);
+
+      try { el.setPointerCapture(e.pointerId); } catch {}
+      moved = false;
+      el.addEventListener('pointermove', onMove, { passive: false });
+      el.addEventListener('pointerup', finishDrag);
+      el.addEventListener('pointercancel', finishDrag);
+
+      onMove(e);
+    }, { passive: false });
+
+    return el;
+  }
+
+  // ---------- Validação ----------
+  function validateProgress() {
+    const slots = [...dropZone.children];
+    const attempt = slots.map(s => s.querySelector('[data-syllable]')?.dataset.syllable || null);
+    const done = attempt.every(Boolean);
+    const correct = done && attempt.join('-') === current.syllables.join('-');
+
+    if (correct) {
+      feedback.className = 'feedback';
+      feedback.textContent = 'Muito bem! Você formou a palavra!';
+      speak('Muito bem! Você formou a palavra!');
+      fireConfetti();
+      setTimeout(nextWord, 700);
+    } else if (done) {
+      feedback.className = 'feedback';
+      feedback.textContent = 'Quase! Troque a ordem.';
+      speak('Quase. Tente outra ordem.');
+    } else {
+      feedback.textContent = '';
+    }
+  }
+
+  // ---------- Round ----------
+  function buildRound() {
+    current = SYLLABLE_WORDS[currentIndex];
+    imageWrap.textContent = current.emoji;
+    feedback.textContent = '';
+
+    // exibidor superior p/ piscar durante TTS
+    buildSyllableDisplay();
+
+    // slots alvo
+    dropZone.innerHTML = '';
+    current.syllables.forEach((_, i) => dropZone.appendChild(createDropSlot(i)));
+
+    // banco: sílabas da palavra + distratores
+    bank.innerHTML = '';
+    const distractors = makeDistractors(current.syllables);
+    const pool = shuffle([...current.syllables, ...distractors]);
+    pool.forEach(s => bank.appendChild(createDraggable(s)));
+  }
+
+  async function setupRound() {
+    buildRound();
+    if (soundToggle?.checked) {
+      await speakAsync('Observe a figura. Vamos montar a palavra.', 0.95, 1);
+      await playSyllablesSynced(current.syllables);
+    }
+  }
+
+  function nextWord() {
+    currentIndex = (currentIndex + 1) % SYLLABLE_WORDS.length;
+    setupRound();
+  }
+
+  // ---------- Eventos ----------
+  btnPlayWord.addEventListener('click', onPlayWord);
+  btnPlaySyllables.addEventListener('click', () => playSyllablesSynced(current.syllables));
+  btnRepeat.addEventListener('click', promptRepeat);
+  btnNext.addEventListener('click', nextWord);
+  btnReset.addEventListener('click', setupRound);
+  soundToggle?.addEventListener('change', () => { window.speechSynthesis.cancel(); });
+
+  // ---------- Inicial ----------
   setupRound();
 })();
